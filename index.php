@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta http-equiv="X-UA-Compatible" content="IE=edge">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <meta name="description" content="Simple PHP script to lookup entries of A, AAAA, NS, MX, SOA and TXT records">
+        <meta name="description" content="Simple PHP script to lookup entries of A, AAAA, CNAME, NS, MX, SOA and TXT records">
         <meta name="author" content="HQWEB">
         <title>Simple DNS Lookup</title>
         <link rel="icon" href="assets/favicon.ico"><!-- https://www.iconperk.com/iconsets/magicons -->
@@ -16,7 +16,7 @@
             <div class="header clearfix">
                 <nav>
                     <ul class="nav nav-pills pull-right">
-                        <li role="presentation" ><a href="/">Outils</a></li>
+                        <li role="presentation" ><a href="/">Home</a></li>
                         <li role="presentation" class="active"><a href="/dns-lookup">DNS Lookup</a></li>
                     </ul>
                 </nav>
@@ -29,7 +29,13 @@
                 // error_reporting(E_ALL); // Uncomment to display errors
                 
                 // If domain is included in URL, prefill form with domain or if form is submitted display domain in it
-                if( isset($_POST['domain']) )
+                if(isset($_POST['submit']) OR isset($_GET['domain'])) {
+
+                if(!empty($_POST['domain']))
+                {
+                    $error = false;
+
+                if(isset($_POST['domain']))
                     {
                         $value = $_POST['domain'];
                     }
@@ -37,9 +43,8 @@
                     {
                         $value = $_GET['domain'];
                     }
-                
                 // Parse url to extract host
-                $posted_domain = $_POST['domain'];
+                $posted_domain = $value ?? null;
                 $parsed_url = parse_url($posted_domain);
                 
                 if (array_key_exists('host', $parsed_url))
@@ -53,29 +58,35 @@
                 
                 // get records
                 $dns_a = dns_get_record($domain, DNS_A);
-                $dns_a_ttl = $dns_a[0]['ttl'];
+                $dns_a_ttl = $dns_a[0]['ttl'] ?? null;
                 
                 $dns_ns = dns_get_record($domain, DNS_NS);
-                $dns_ns_ttl = $dns_ns[0]['ttl'];
+                $dns_ns_ttl = $dns_ns[0]['ttl'] ?? null;
                 
                 $dns_mx = dns_get_record($domain, DNS_MX);
-                $dns_mx_ttl = $dns_mx[0]['ttl'];
+                $dns_mx_ttl = $dns_mx[0]['ttl'] ?? null;
+
+                $dns_cname = dns_get_record($domain, DNS_CNAME);
+                $dns_cname_ttl = $dns_cname[0]['ttl'] ?? null;
                 
-                $dns_soa = dns_get_record($domain, DNS_SOA);
-                $dns_soa_ttl = $dns_soa[0]['ttl'];
+                $dns_soa = dns_get_record($domain, DNS_SOA) ?? null;
+                $dns_soa_ttl = $dns_soa[0]['ttl'] ?? null;
+                if (isset($dns_soa[0]['rname']))
+                {
                 $dns_soa_email = explode(".", $dns_soa[0]['rname']);
-                $dns_soa_email = $dns_soa_email[0].'@'.$dns_soa_email[1].'.'.$dns_soa_email[2];
-                $dns_soa_serial = $dns_soa[0]['serial'];
-                $dns_soa_refresh = $dns_soa[0]['refresh'];
-                $dns_soa_retry = $dns_soa[0]['retry'];
-                $dns_soa_expire = $dns_soa[0]['expire'];
-                $dns_soa_minimum_ttl = $dns_soa[0]['minimum-ttl'];
+                $dns_soa_email = $dns_soa_email[0].'@'.$dns_soa_email[1].'.'.$dns_soa_email[2] ?? null;
+                }
+                $dns_soa_serial = $dns_soa[0]['serial'] ?? null;
+                $dns_soa_refresh = $dns_soa[0]['refresh'] ?? null;
+                $dns_soa_retry = $dns_soa[0]['retry'] ?? null;
+                $dns_soa_expire = $dns_soa[0]['expire'] ?? null;
+                $dns_soa_minimum_ttl = $dns_soa[0]['minimum-ttl'] ?? null;
                 
                 $dns_txt = dns_get_record($domain, DNS_TXT);
-                $dns_txt_ttl = $dns_txt[0]['ttl'];
+                $dns_txt_ttl = $dns_txt[0]['ttl'] ?? null;
                 
                 $dns_aaaa = dns_get_record($domain, DNS_AAAA);
-                $dns_aaaa_ttl = $dns_aaaa[0]['ttl'];
+                $dns_aaaa_ttl = $dns_aaaa[0]['ttl'] ?? null;
                 
                 // Page URL : check if "?domain=" is in the URL to adapt http_referer content
                 if( (strpos($_SERVER['HTTP_REFERER'], '?domain=') !== false) )
@@ -86,6 +97,14 @@
                     {
                         $page_url_domain = $_SERVER['HTTP_REFERER'] . "?domain=" . $value;
                     }
+
+                }
+                else
+                {
+                    $error = true;
+                    $value = $_GET['domain'] ?? null;
+                }
+                }
             ?>
             
             <div class="jumbotron">
@@ -97,7 +116,7 @@
                             name ="domain"
                             id="domain"
                             placeholder="https://www.domain.com/page.html or domain.com"
-                            value="<?=$value?>"
+                            value="<?=$value ?? null?>"
                             requirerd
                         >
                         <button type="submit" name="submit" class="btn btn-primary btn-lg">Lookup</button>
@@ -105,7 +124,7 @@
                 </form>
             </div>
             
-            <?php if(isset($_POST['submit'])) { ?> <!-- IF FORM SUBMITTED -->
+            <?php if(isset($_POST['submit']) AND !$error) { ?> <!-- IF FORM SUBMITTED -->
             
             <div class="row marketing">
                 
@@ -136,14 +155,7 @@
                         <td class="success">
                             <?php foreach($dns_a as $value)
                                 {
-                                    echo "<h4>";
-                                    $ipapi = file_get_contents('http://ip-api.com/json/' . $value['ip'] . '?fields=4195842'); // https://ip-api.com/docs/api:json#test
-                                    $ipapidc = json_decode($ipapi, true);
-                                    $country_code_flag = $ipapidc['countryCode']; // Uppercase
-                                    echo mb_convert_encoding( '&#' . ( 127397 + ord( $country_code_flag[0] ) ) . ';', 'UTF-8', 'HTML-ENTITIES');
-                                    echo mb_convert_encoding( '&#' . ( 127397 + ord( $country_code_flag[1] ) ) . ';', 'UTF-8', 'HTML-ENTITIES');
-                                    echo(" " . $ipapidc['countryCode'] . " · " . $value['ip']. " · <small>(<b>ISP</b> " . $ipapidc['isp']. " <b>ORG</b> " . $ipapidc['org']. " <b>AS</b> " . $ipapidc['asname']);
-                                    echo ")</small></h4>";
+                                    echo "<h4>" . $value['ip'] . "</h4>";
                                 }
                             ?>
                         </td>
@@ -170,14 +182,7 @@
                         <td class="success">
                             <?php foreach($dns_aaaa as $value)
                                 {
-                                    echo "<h4>";
-                                    $ipapi = file_get_contents('http://ip-api.com/json/' . $value['ipv6'] . '?fields=4195842');
-                                    $ipapidc = json_decode($ipapi, true);
-                                    $country_code_flag = $ipapidc['countryCode']; // Uppercase
-                                    echo mb_convert_encoding( '&#' . ( 127397 + ord( $country_code_flag[0] ) ) . ';', 'UTF-8', 'HTML-ENTITIES');
-                                    echo mb_convert_encoding( '&#' . ( 127397 + ord( $country_code_flag[1] ) ) . ';', 'UTF-8', 'HTML-ENTITIES');
-                                    echo(" ". $ipapidc['countryCode'] . " · " . $value['ipv6']. " ·<small> <b>ISP</b> ". $ipapidc['isp']. " · <b>ORG</b> ". $ipapidc['org']. " · <b>ASNAME</b> ". $ipapidc['asname']);
-                                    echo "</small></h4>";
+                                    echo "<h4>" . $value['ipv6'] . "</h4>";
                                 }
                             ?>
                         </td>
@@ -186,7 +191,33 @@
                         
                     </tr>
                     <!-- AAAA RECORD -->
-                    
+
+                    <!-- CNAME RECORD -->
+                    <tr>
+
+                        <td class="vert-align text-center"><h4><span class="label label-default">CNAME</span></h4></td>
+
+                        <?php if(empty($dns_cname) != null){ ?> <!-- IF NO AAAA RECORD -->
+
+                        <td class="vert-align text-center">NA</td>
+                        <td class="warning"><h4>No record</h4></td>
+
+                        <?php } else { ?> <!-- ELSE AAAA RECORD -->
+
+                        <td class="vert-align text-center"><?=$dns_cname_ttl?></td>
+                        <td class="success">
+                            <?php foreach($dns_cname as $value)
+                                {
+                                    echo "<h4>" . $value['target'] . "</h4>";
+                                }
+                            ?>
+                        </td>
+
+                        <?php } ?> <!-- ENDIF AAAA NO RECORD -->
+
+                    </tr>
+                    <!-- CNAME RECORD -->
+
                     <!-- NS RECORD -->
                     <tr>
                         
@@ -205,14 +236,7 @@
                                 {
                                     echo "<h4>";
                                     echo($value['target']);
-                                    echo " (";
-                                    $ipapi = file_get_contents('http://ip-api.com/json/' . gethostbyname($value['target']) . '?fields=2');
-                                    $ipapidc = json_decode($ipapi, true);
-                                    $country_code_flag = $ipapidc['countryCode']; // Uppercase
-                                    echo mb_convert_encoding( '&#' . ( 127397 + ord( $country_code_flag[0] ) ) . ';', 'UTF-8', 'HTML-ENTITIES');
-                                    echo mb_convert_encoding( '&#' . ( 127397 + ord( $country_code_flag[1] ) ) . ';', 'UTF-8', 'HTML-ENTITIES');
-                                    echo(" " . $ipapidc['countryCode'] . " · " . gethostbyname($value['target'])); 
-                                    echo ")</h4>";
+                                    echo " (" . gethostbyname($value['target']) . ")</h4>";
                                 }
                             ?>
                         </td>
@@ -239,14 +263,7 @@
                             <?php foreach($dns_mx as $value)
                                 {
                                     echo "<h4>";
-                                    echo("[" . $value['pri'] . "] " . $value['target'] . " (");
-                                    $ipapi = file_get_contents('http://ip-api.com/json/' . gethostbyname($value['target']) . '?fields=2');
-                                    $ipapidc = json_decode($ipapi, true);
-                                    $country_code_flag = $ipapidc['countryCode']; // Uppercase
-                                    echo mb_convert_encoding( '&#' . ( 127397 + ord( $country_code_flag[0] ) ) . ';', 'UTF-8', 'HTML-ENTITIES');
-                                    echo mb_convert_encoding( '&#' . ( 127397 + ord( $country_code_flag[1] ) ) . ';', 'UTF-8', 'HTML-ENTITIES');
-                                    echo(" " . $ipapidc['countryCode'] . " · " . gethostbyname($value['target']));
-                                    echo ")</h4>";
+                                    echo("[" . $value['pri'] . "] " . $value['target'] . " (" . gethostbyname($value['target'])) . ")</h4>";
                                 }
                             ?>
                         </td>
