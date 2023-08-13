@@ -17,7 +17,7 @@
                 <nav>
                     <ul class="nav nav-pills pull-right">
                         <li role="presentation" ><a href="/">Home</a></li>
-                        <li role="presentation" class="active"><a href="/dns-lookup">DNS Lookup</a></li>
+                        <li role="presentation" class="active"><a href="/UTILITIES/dns-lookup">DNS Lookup</a></li>
                     </ul>
                 </nav>
                 <h3 class="text-muted">Simple DNS Lookup</h3>
@@ -68,6 +68,9 @@
 
                 $dns_cname = dns_get_record($domain, DNS_CNAME);
                 $dns_cname_ttl = $dns_cname[0]['ttl'] ?? null;
+
+                $dns_caa = dns_get_record($domain, DNS_CAA);
+                $dns_caa_ttl = $dns_caa[0]['ttl'] ?? null;
                 
                 $dns_soa = dns_get_record($domain, DNS_SOA) ?? null;
                 $dns_soa_ttl = $dns_soa[0]['ttl'] ?? null;
@@ -197,12 +200,12 @@
 
                         <td class="vert-align text-center"><h4><span class="label label-default">CNAME</span></h4></td>
 
-                        <?php if(empty($dns_cname) != null){ ?> <!-- IF NO AAAA RECORD -->
+                        <?php if(empty($dns_cname) != null){ ?> <!-- IF NO CNAME RECORD -->
 
                         <td class="vert-align text-center">NA</td>
                         <td class="warning"><h4>No record</h4></td>
 
-                        <?php } else { ?> <!-- ELSE AAAA RECORD -->
+                        <?php } else { ?> <!-- ELSE CNAME RECORD -->
 
                         <td class="vert-align text-center"><?=$dns_cname_ttl?></td>
                         <td class="success">
@@ -213,7 +216,7 @@
                             ?>
                         </td>
 
-                        <?php } ?> <!-- ENDIF AAAA NO RECORD -->
+                        <?php } ?> <!-- ENDIF CNAME NO RECORD -->
 
                     </tr>
                     <!-- CNAME RECORD -->
@@ -328,6 +331,32 @@
                         
                     </tr>
                     <!-- TXT RECORD -->
+
+                    <!-- CAA RECORD -->
+                    <tr>
+
+                        <td class="vert-align text-center"><h4><span class="label label-default">CAA</span></h4></td>
+
+                        <?php if(empty($dns_caa) != null){ ?> <!-- IF NO CAA RECORD -->
+
+                        <td class="vert-align text-center">NA</td>
+                        <td class="warning"><h4>No record</h4></td>
+
+                        <?php } else { ?> <!-- ELSE CAA RECORD -->
+
+                        <td class="vert-align text-center"><?=$dns_caa_ttl?></td>
+                        <td class="success">
+                            <?php foreach($dns_caa as $value)
+                                {
+                                    echo "<h4>" . $value['flags'] . " " . $value['tag'] . " " . $value['value'] . " " . "</h4>";
+                                }
+                            ?>
+                        </td>
+
+                        <?php } ?> <!-- ENDIF CAA NO RECORD -->
+
+                    </tr>
+                    <!-- CAA RECORD -->
                     
                 </table>
                 
